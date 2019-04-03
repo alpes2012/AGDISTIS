@@ -171,11 +171,13 @@ public class CandidateUtil {
 		int countFinalCandidates = 0;
 
 		PreprocessingNLP nlp = new PreprocessingNLP();
-		// Label treatment
+
+		// Label treatment 清理公司相关的后缀
 		label = corporationAffixCleaner.cleanLabelsfromCorporationIdentifier(label);
 		log.info("Label:" + label);
 		label = nlp.Preprocessing(label);
 		// label treatment finished ->
+
 		// searchByAcronym
 		if (acronym == true) {
 			if (label.equals(label.toUpperCase()) && label.length() <= 4) {

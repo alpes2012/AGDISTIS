@@ -144,6 +144,7 @@ public class GetDisambiguation extends ServerResource {
 		return document;
 	}
 
+	//GERBIL – General Entity Annotator Benchmarking Framework
 	public String NIFGerbil(InputStream input, NEDAlgo_HITS agdistis) throws IOException {
 		org.aksw.gerbil.transfer.nif.Document document;
 		String nifDocument = "";

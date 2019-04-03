@@ -106,7 +106,7 @@ public class NEDAlgo_HITS {
 				for (int i = 0; i < orderedList.size(); i++) {
 					Node m = orderedList.get(i);
 					// there can be one node (candidate) for two labels
-					if (m.containsId(entity.getStartPos())) {
+					if (m.containsId(entity.getStartPos())) { //用ids来区分是哪个entity的candidate集，选择AuthorityWeight最高的那个
 						entity.setNamedEntity(m.getCandidateURI());
 						break;
 					}
