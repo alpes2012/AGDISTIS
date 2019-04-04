@@ -118,7 +118,7 @@ public class Stemming {
 		 * Lemmatization(); System.out.println(slem.lemmatize(text));
 		 */
 		// String label = "Northern India";
-		String label = "Tibetan";
+		String label = "apple";
 		Stemming slem = new Stemming();
 
 		label = slem.stemming(label);

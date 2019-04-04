@@ -73,14 +73,25 @@ public class TwitterCandidate {
         return ret;
     }
 
+    public String getText(ArrayList<String> twitterCandidates) {
+        StringBuilder stringBuilder = new StringBuilder(2048);
+
+        for (String candidate: twitterCandidates) {
+            stringBuilder.append("<entity>");
+            stringBuilder.append(candidate);
+            stringBuilder.append("</entity>");
+        }
+
+        return stringBuilder.toString();
+    }
+
+
+
     public static void main(String[] args) throws Exception {
         TwitterCandidate tc = new TwitterCandidate();
         ArrayList<String> info = tc.getContextUserNamesByScreenName("aaronpena");
 
-        for (String str: info) {
-            System.out.println(str);
-        }
-
+        System.out.println(tc.getText(info));
 
     }
 

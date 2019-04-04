@@ -3,17 +3,20 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Properties;
 
 import org.aksw.agdistis.algorithm.CandidateUtil;
 import org.aksw.agdistis.algorithm.NEDAlgo_HITS;
+import org.aksw.agdistis.algorithm.TwitterCandidate;
 import org.aksw.agdistis.datatypes.Document;
 import org.aksw.agdistis.datatypes.NamedEntitiesInText;
 import org.aksw.agdistis.datatypes.NamedEntityInText;
 import org.aksw.agdistis.util.TripleIndexContext;
 import org.aksw.agdistis.webapp.GetDisambiguation;
 import org.junit.Test;
+
 
 public class AGDISTISTest {
 
@@ -162,6 +165,25 @@ public class AGDISTISTest {
 				assertTrue(correct.get(namedEntity.getLabel()).equals(disambiguatedURL));
 			}
 		}
+	}
+
+	@Test
+	public void testTwitterExample() throws Exception {
+		TwitterCandidate tc = new TwitterCandidate();
+		ArrayList<String> info = tc.getContextUserNamesByScreenName("aaronpena");
+		String preAnnotatedText = tc.getText(info);
+
+		NEDAlgo_HITS agdistis = new NEDAlgo_HITS();
+		Document d = GetDisambiguation.textToDocument(preAnnotatedText);
+		agdistis.run(d, null);
+
+		NamedEntitiesInText namedEntities = d.getNamedEntitiesInText();
+		HashMap<NamedEntityInText, String> results = new HashMap<NamedEntityInText, String>();
+		for (NamedEntityInText namedEntity : namedEntities) {
+			String disambiguatedURL = namedEntity.getNamedEntityUri();
+			results.put(namedEntity, disambiguatedURL);
+		}
+
 	}
 
 }

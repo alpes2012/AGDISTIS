@@ -178,7 +178,7 @@ public class CandidateUtil {
 		label = nlp.Preprocessing(label);
 		// label treatment finished ->
 
-		// searchByAcronym
+		// searchByAcronym 缩写搜索
 		if (acronym == true) {
 			if (label.equals(label.toUpperCase()) && label.length() <= 4) {
 				acronymCandidatesTemp = searchbyAcronym(label, searchInSurfaceForms, entity.getType());
