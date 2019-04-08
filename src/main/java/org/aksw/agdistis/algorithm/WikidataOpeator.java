@@ -1,21 +1,72 @@
 package org.aksw.agdistis.algorithm;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import org.wikidata.wdtk.datamodel.helpers.JsonSerializer;
+import org.wikidata.wdtk.datamodel.interfaces.*;
 import org.wikidata.wdtk.wikibaseapi.WbGetEntitiesSearchData;
+import org.wikidata.wdtk.wikibaseapi.WbSearchEntitiesResult;
 import org.wikidata.wdtk.wikibaseapi.WikibaseDataFetcher;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Map;
 
 public class WikidataOpeator {
 
-    private WikibaseDataFetcher wbdf = WikibaseDataFetcher.getWikidataDataFetcher();;
+    private WikibaseDataFetcher wbdf = WikibaseDataFetcher.getWikidataDataFetcher();
     private WbGetEntitiesSearchData properties =  new WbGetEntitiesSearchData();
 
 
     public WikidataOpeator() throws  Exception {
+        WikibaseDataFetcher wbdf = WikibaseDataFetcher.getWikidataDataFetcher();
         this.properties.language = "en";
         this.properties.limit = (long)50;
         this.properties.type = "item";
     }
 
-    public
+    public ArrayList<String> search(String searchStr) throws Exception {
+
+        ArrayList<WbSearchEntitiesResult> lResult;
+        WbGetEntitiesSearchData properties =  new WbGetEntitiesSearchData();
+        this.properties.search = searchStr;
+
+        lResult = (ArrayList<WbSearchEntitiesResult>) this.wbdf.searchEntities(properties);
+
+        ArrayList<String> lRet = new ArrayList<>();
+        for (WbSearchEntitiesResult wr : lResult) { lRet.add(wr.getEntityId()); }
+
+        return lRet;
+    }
+
+    public Map<String, EntityDocument> getDocuments(ArrayList<String> idList) throws Exception {
+        return this.wbdf.getEntityDocuments(idList);
+    }
+
+    public EntityDocument getDocument(String id) throws Exception {
+        return this.wbdf.getEntityDocument(id);
+    }
+
+    public ArrayList<String> getRelatedItems(String id) throws Exception {
+        ItemDocument itemDocument = (ItemDocument)this.wbdf.getEntityDocument(id);
+        ArrayList<String> lRet = new ArrayList<>();
+
+        for (Iterator itStatment = itemDocument.getAllStatements(); itStatment.hasNext();) {
+            JSONObject statment = JSON.parseObject(JsonSerializer.getJsonString((Statement) itStatment.next()));
+            if (statment.getJSONObject("mainsnak").getString("datatype").compareTo("wikibase-item") != 0)
+                continue;
+
+            String subId = statment.getJSONObject("mainsnak").getJSONObject("datavalue").getJSONObject("value").getString("id");
+
+            System.out.println(subId);
+
+            lRet.add(subId);
+
+        }
+
+        return null;
+    }
+
 
     public void setSearchLanguage(String lag) {
         this.properties.language = lag;
@@ -27,5 +78,11 @@ public class WikidataOpeator {
 
     public void setSearchTypt(String type) {
         this.properties.type = type;
+
+    }
+
+    public static void main(String[] args) throws Exception {
+        WikidataOpeator wo = new WikidataOpeator();
+        
     }
 }
