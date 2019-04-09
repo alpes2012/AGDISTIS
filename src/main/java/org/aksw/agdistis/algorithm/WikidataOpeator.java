@@ -7,6 +7,7 @@ import org.wikidata.wdtk.datamodel.interfaces.*;
 import org.wikidata.wdtk.wikibaseapi.WbGetEntitiesSearchData;
 import org.wikidata.wdtk.wikibaseapi.WbSearchEntitiesResult;
 import org.wikidata.wdtk.wikibaseapi.WikibaseDataFetcher;
+import org.wikidata.wdtk.wikibaseapi.apierrors.NoSuchEntityErrorException;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -28,10 +29,10 @@ public class WikidataOpeator {
     public ArrayList<String> search(String searchStr) throws Exception {
 
         ArrayList<WbSearchEntitiesResult> lResult;
-        WbGetEntitiesSearchData properties =  new WbGetEntitiesSearchData();
+        //WbGetEntitiesSearchData properties =  new WbGetEntitiesSearchData();
         this.properties.search = searchStr;
 
-        lResult = (ArrayList<WbSearchEntitiesResult>) this.wbdf.searchEntities(properties);
+        lResult = (ArrayList<WbSearchEntitiesResult>) this.wbdf.searchEntities(this.properties);
 
         ArrayList<String> lRet = new ArrayList<>();
         for (WbSearchEntitiesResult wr : lResult) { lRet.add(wr.getEntityId()); }
@@ -52,19 +53,24 @@ public class WikidataOpeator {
         ArrayList<String> lRet = new ArrayList<>();
 
         for (Iterator itStatment = itemDocument.getAllStatements(); itStatment.hasNext();) {
-            JSONObject statment = JSON.parseObject(JsonSerializer.getJsonString((Statement) itStatment.next()));
-            if (statment.getJSONObject("mainsnak").getString("datatype").compareTo("wikibase-item") != 0)
+            try{
+                JSONObject statment = JSON.parseObject(JsonSerializer.getJsonString((Statement) itStatment.next()));
+                if (statment.isEmpty()) continue;
+                if (statment.getJSONObject("mainsnak").getString("datatype").compareTo("wikibase-item") != 0)
+                    continue;
+
+                String subId = statment.getJSONObject("mainsnak").getJSONObject("datavalue").getJSONObject("value").getString("id");
+
+                //System.out.println(subId);
+
+                lRet.add(subId);
+            }
+            catch (NullPointerException e) {
                 continue;
-
-            String subId = statment.getJSONObject("mainsnak").getJSONObject("datavalue").getJSONObject("value").getString("id");
-
-            System.out.println(subId);
-
-            lRet.add(subId);
-
+            }
         }
 
-        return null;
+        return lRet;
     }
 
 
@@ -83,6 +89,30 @@ public class WikidataOpeator {
 
     public static void main(String[] args) throws Exception {
         WikidataOpeator wo = new WikidataOpeator();
-        
+        for (int i = 1000; i < 10000; i++) {
+
+            ItemDocument item;
+            String id = String.format("Q%d", i);
+            try {
+                item = (ItemDocument)wo.getDocument(id);
+            }
+            catch (NoSuchEntityErrorException e) {
+                continue;
+            }
+
+            if (item == null) continue;
+
+            String label = item.getLabels().get("en").getText();
+            String des = item.getDescriptions().get("en").getText();
+            int statmentCount = 0;
+            Iterator it = item.getAllStatements();
+            while (it.hasNext()) {
+                it.next();
+                statmentCount += 1;
+            }
+
+            System.out.println(String.format("%s : %d : %s : %s", id, statmentCount, label, des));
+
+        }
     }
 }

@@ -12,10 +12,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 public class TwitterCandidate {
 
@@ -73,6 +70,39 @@ public class TwitterCandidate {
         return ret;
     }
 
+    public static ArrayList<String> getContextUserNames(JSONObject info) {
+        ArrayList<String> ret = new ArrayList<>();
+        for (Iterator itMention = info.getObject("mention", JSONArray.class).iterator(); itMention.hasNext();) {
+            JSONObject mention = (JSONObject)itMention.next();
+            if (mention.getString("userName").length() > 0)
+                ret.add(mention.getString("userName"));
+        }
+        //retweet
+        for (Iterator itRetweet = info.getObject("retweet", JSONArray.class).iterator(); itRetweet.hasNext();) {
+            JSONObject retweet = (JSONObject)itRetweet.next();
+            if (retweet.getString("userName").length() > 0)
+                ret.add(retweet.getString("userName"));
+        }
+
+        //following
+
+        //quote
+
+        ret = TwitterCandidate.removeDuplicate(ret);
+
+        return ret;
+    }
+
+    public JSONObject getJsonInfoByScreenName(String screenName) {
+        for (Iterator it = this.tdArray.iterator(); it.hasNext();) {
+            JSONObject userObj = (JSONObject) it.next();
+            if (userObj.getString("screenName").toLowerCase().compareTo(screenName.toLowerCase()) == 0) {
+                return userObj;
+            }
+        }
+        return null;
+    }
+
     public String getText(ArrayList<String> twitterCandidates) {
         StringBuilder stringBuilder = new StringBuilder(2048);
 
@@ -106,4 +136,11 @@ public class TwitterCandidate {
 
         return new String(filecontent, encoding);
     }
+    private static ArrayList<String> removeDuplicate(ArrayList<String> list) {
+        HashSet h = new HashSet(list);
+        list.clear();
+        list.addAll(h);
+        return list;
+    }
+
 }
