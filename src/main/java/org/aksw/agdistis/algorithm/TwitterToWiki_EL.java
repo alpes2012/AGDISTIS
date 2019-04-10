@@ -1,17 +1,16 @@
 package org.aksw.agdistis.algorithm;
 
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.JSONWriter;
 import edu.uci.ics.jung.graph.DirectedSparseGraph;
 import org.aksw.agdistis.graph.HITS;
 import org.aksw.agdistis.graph.Node;
-import org.aksw.agdistis.graph.NodeQueue;
-import org.aksw.agdistis.util.Triple;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.aksw.agdistis.util.NodeQueue;
+import org.aksw.agdistis.util.RelatedEntitiesBuffer;
+import org.apache.jena.base.Sys;
 import org.wikidata.wdtk.datamodel.interfaces.EntityDocument;
 
-import java.io.File;
-import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.InputStream;
 import java.util.*;
 
@@ -31,6 +30,8 @@ public class TwitterToWiki_EL {
 
     private int maxDepth;
 
+    private RelatedEntitiesBuffer reb;
+
     public TwitterToWiki_EL() throws Exception {
         Properties prop = new Properties();
         InputStream input = NEDAlgo_HITS.class.getResourceAsStream("/config/agdistis.properties");
@@ -43,6 +44,8 @@ public class TwitterToWiki_EL {
         this.wikidataOpeator.setResultsCountLimit(10);
         this.twitterUserNames = new ArrayList<>();
         this.entities = new ArrayList<>();
+
+        this.reb = new RelatedEntitiesBuffer(System.getProperty("user.dir") + "\\src\\main\\resources\\config\\relatedEntities.json");
 
     }
 
@@ -58,7 +61,7 @@ public class TwitterToWiki_EL {
 
         //*************************************************************
 
-        List<String> subList = this.twitterUserNames.subList(0, 10);
+        List<String> subList = this.twitterUserNames.subList(0, 1);
         this.twitterUserNames = new ArrayList<>(subList);
 
         //*************************************************************
@@ -91,6 +94,9 @@ public class TwitterToWiki_EL {
         System.out.println("done!");
 
         //6. select the one
+        ArrayList<Node> orderedList = new ArrayList<Node>();
+        orderedList.addAll(graph.getVertices());
+        Collections.sort(orderedList);
     }
 
     private void breadthFirstSearch(DirectedSparseGraph<Node, String> graph) throws Exception {
@@ -105,7 +111,14 @@ public class TwitterToWiki_EL {
             if (level >= maxDepth) continue;
             if (Integer.parseInt(currentNode.getCandidateURI().substring(1)) <= 1000) continue;
 
-            ArrayList<String> relatedId = this.wikidataOpeator.getRelatedItems(currentNode.getCandidateURI());
+            ArrayList<String> relatedId;
+            if (this.reb.isContain(currentNode.getCandidateURI())) {
+                relatedId = this.reb.get(currentNode.getCandidateURI());
+            }
+            else {
+                relatedId = this.wikidataOpeator.getRelatedItems(currentNode.getCandidateURI());
+                this.reb.add(currentNode.getCandidateURI(), relatedId);
+            }
 
             if (relatedId.size() > 30) continue;
 
@@ -117,6 +130,8 @@ public class TwitterToWiki_EL {
                 graph.addEdge(String.valueOf(graph.getEdgeCount()), currentNode, node);
             }
         }
+
+        this.reb.writeToFile();
     }
 
 
@@ -209,6 +224,7 @@ public class TwitterToWiki_EL {
     }
 
     public static void main(String[] args) throws Exception {
+
         TwitterCandidate tc = new TwitterCandidate();
         JSONObject jb = tc.getJsonInfoByScreenName("aaronpena");
 

@@ -1,4 +1,6 @@
-package org.aksw.agdistis.graph;
+package org.aksw.agdistis.util;
+
+import org.aksw.agdistis.graph.Node;
 
 import java.util.HashMap;
 import java.util.LinkedList;

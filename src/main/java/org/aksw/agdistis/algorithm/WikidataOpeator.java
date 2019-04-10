@@ -2,6 +2,7 @@ package org.aksw.agdistis.algorithm;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import org.aksw.agdistis.util.RelatedEntitiesBuffer;
 import org.wikidata.wdtk.datamodel.helpers.JsonSerializer;
 import org.wikidata.wdtk.datamodel.interfaces.*;
 import org.wikidata.wdtk.wikibaseapi.WbGetEntitiesSearchData;
@@ -19,11 +20,14 @@ public class WikidataOpeator {
     private WbGetEntitiesSearchData properties =  new WbGetEntitiesSearchData();
 
 
+
     public WikidataOpeator() throws  Exception {
         WikibaseDataFetcher wbdf = WikibaseDataFetcher.getWikidataDataFetcher();
         this.properties.language = "en";
         this.properties.limit = (long)50;
         this.properties.type = "item";
+
+
     }
 
     public ArrayList<String> search(String searchStr) throws Exception {
@@ -49,6 +53,8 @@ public class WikidataOpeator {
     }
 
     public ArrayList<String> getRelatedItems(String id) throws Exception {
+
+
         ItemDocument itemDocument = (ItemDocument)this.wbdf.getEntityDocument(id);
         ArrayList<String> lRet = new ArrayList<>();
 
@@ -69,6 +75,8 @@ public class WikidataOpeator {
                 continue;
             }
         }
+
+
 
         return lRet;
     }
