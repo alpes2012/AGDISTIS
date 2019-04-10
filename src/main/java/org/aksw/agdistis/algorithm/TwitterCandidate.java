@@ -96,6 +96,8 @@ public class TwitterCandidate {
     public JSONObject getJsonInfoByScreenName(String screenName) {
         for (Iterator it = this.tdArray.iterator(); it.hasNext();) {
             JSONObject userObj = (JSONObject) it.next();
+            if (userObj.size() == 0)
+                continue;
             if (userObj.getString("screenName").toLowerCase().compareTo(screenName.toLowerCase()) == 0) {
                 return userObj;
             }

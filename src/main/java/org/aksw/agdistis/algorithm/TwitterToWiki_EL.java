@@ -61,8 +61,8 @@ public class TwitterToWiki_EL {
 
         //*************************************************************
 
-        List<String> subList = this.twitterUserNames.subList(0, 1);
-        this.twitterUserNames = new ArrayList<>(subList);
+//        List<String> subList = this.twitterUserNames.subList(0, 1);
+//        this.twitterUserNames = new ArrayList<>(subList);
 
         //*************************************************************
 
@@ -109,7 +109,7 @@ public class TwitterToWiki_EL {
             int level = currentNode.getLevel();
 
             if (level >= maxDepth) continue;
-            if (Integer.parseInt(currentNode.getCandidateURI().substring(1)) <= 1000) continue;
+            //if (Integer.parseInt(currentNode.getCandidateURI().substring(1)) <= 500) continue;
 
             ArrayList<String> relatedId;
             if (this.reb.isContain(currentNode.getCandidateURI())) {
@@ -120,7 +120,7 @@ public class TwitterToWiki_EL {
                 this.reb.add(currentNode.getCandidateURI(), relatedId);
             }
 
-            if (relatedId.size() > 30) continue;
+            //if (relatedId.size() > 50) continue;
 
             System.out.println(String.format("%s : %d : %d : %d", currentNode.getCandidateURI(), level, relatedId.size(), q.size()));
             for (String id: relatedId) {
@@ -226,7 +226,7 @@ public class TwitterToWiki_EL {
     public static void main(String[] args) throws Exception {
 
         TwitterCandidate tc = new TwitterCandidate();
-        JSONObject jb = tc.getJsonInfoByScreenName("aaronpena");
+        JSONObject jb = tc.getJsonInfoByScreenName("tomdaschle");
 
         if (jb == null){
             System.out.println("get info json failed");
