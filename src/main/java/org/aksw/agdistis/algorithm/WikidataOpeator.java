@@ -1,8 +1,10 @@
 package org.aksw.agdistis.algorithm;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import org.aksw.agdistis.util.RelatedEntitiesBuffer;
+import org.jsoup.nodes.Document;
 import org.wikidata.wdtk.datamodel.helpers.JsonSerializer;
 import org.wikidata.wdtk.datamodel.interfaces.*;
 import org.wikidata.wdtk.wikibaseapi.WbGetEntitiesSearchData;
@@ -54,9 +56,11 @@ public class WikidataOpeator {
 
     public ArrayList<String> getRelatedItems(String id) throws Exception {
 
-
+        //DocumentDataFilter filter = this.wbdf.getFilter();
+        //filter.setLanguageFilter();
         ItemDocument itemDocument = (ItemDocument)this.wbdf.getEntityDocument(id);
         ArrayList<String> lRet = new ArrayList<>();
+        if (itemDocument == null) return lRet;
 
         for (Iterator itStatment = itemDocument.getAllStatements(); itStatment.hasNext();) {
             try{
@@ -96,31 +100,36 @@ public class WikidataOpeator {
     }
 
     public static void main(String[] args) throws Exception {
-        WikidataOpeator wo = new WikidataOpeator();
-        for (int i = 1000; i < 10000; i++) {
-
-            ItemDocument item;
-            String id = String.format("Q%d", i);
-            try {
-                item = (ItemDocument)wo.getDocument(id);
-            }
-            catch (NoSuchEntityErrorException e) {
-                continue;
-            }
-
-            if (item == null) continue;
-
-            String label = item.getLabels().get("en").getText();
-            String des = item.getDescriptions().get("en").getText();
-            int statmentCount = 0;
-            Iterator it = item.getAllStatements();
-            while (it.hasNext()) {
-                it.next();
-                statmentCount += 1;
-            }
-
-            System.out.println(String.format("%s : %d : %s : %s", id, statmentCount, label, des));
-
-        }
+        TwitterCandidate tc = new TwitterCandidate();
+        JSONArray array = tc.getTwitterDataArray();
     }
+
+//    public static void main(String[] args) throws Exception {
+//        WikidataOpeator wo = new WikidataOpeator();
+//        for (int i = 1000; i < 10000; i++) {
+//
+//            ItemDocument item;
+//            String id = String.format("Q%d", i);
+//            try {
+//                item = (ItemDocument)wo.getDocument(id);
+//            }
+//            catch (NoSuchEntityErrorException e) {
+//                continue;
+//            }
+//
+//            if (item == null) continue;
+//
+//            String label = item.getLabels().get("en").getText();
+//            String des = item.getDescriptions().get("en").getText();
+//            int statmentCount = 0;
+//            Iterator it = item.getAllStatements();
+//            while (it.hasNext()) {
+//                it.next();
+//                statmentCount += 1;
+//            }
+//
+//            System.out.println(String.format("%s : %d : %s : %s", id, statmentCount, label, des));
+//
+//        }
+//    }
 }
