@@ -13,7 +13,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.6.0</version>
                 <configuration>
-                    <argLine>-Xmx6G</argLine>
+                    <!--argLine>-Xmx6G</argLine-->
                     <source>1.8</source>
                     <target>1.8</target>
                     <encoding>UTF-8</encoding>
@@ -73,6 +73,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <mavenVersion>4.0</mavenVersion>
+        <maven.version>4.0</maven.version>
     </properties>
     <prerequisites>
         <maven>${maven.version}</maven>
@@ -100,6 +101,13 @@
         </repository>
     </repositories>
     <dependencies>
+
+        <!-- https://mvnrepository.com/artifact/org.neo4j/neo4j-jdbc-driver -->
+        <dependency>
+            <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-jdbc-driver</artifactId>
+            <version>3.4.0</version>
+        </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.jsoup/jsoup -->
         <dependency>

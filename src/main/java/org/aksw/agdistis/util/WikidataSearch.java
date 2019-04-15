@@ -1,9 +1,6 @@
 package org.aksw.agdistis.util;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -43,7 +40,9 @@ public class WikidataSearch {
         }
 
         for (int i = 0; i < this.searchStrings.size(); i++) {
-             this.results.put(searchStrings.get(i), wstArray.get(i).getResults());
+            if (wstArray.get(i).getResults().size() == 0)
+                continue;
+            this.results.put(searchStrings.get(i), wstArray.get(i).getResults());
         }
     }
 
@@ -56,6 +55,10 @@ public class WikidataSearch {
 //        for (String str: searchStrings) {
 //            this.results.put(str, null);
 //        }
+    }
+
+    public void setSearchStrings(String searchString) {
+        this.searchStrings = new ArrayList<String>(Arrays.asList(searchString));
     }
 
     public void setMaxThreadPoolSize(int maxThreadPoolSize) {

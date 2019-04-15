@@ -1,25 +1,15 @@
 package org.aksw.agdistis.algorithm;
 
 import com.alibaba.fastjson.JSONObject;
-import com.alibaba.fastjson.JSONWriter;
 import edu.uci.ics.jung.graph.DirectedSparseGraph;
 import org.aksw.agdistis.graph.HITS;
 import org.aksw.agdistis.graph.Node;
-import org.aksw.agdistis.util.NodeQueue;
-import org.aksw.agdistis.util.RelatedEntitiesBuffer;
-import org.aksw.agdistis.util.WikidataSearch;
-import org.apache.jena.base.Sys;
-import org.wikidata.wdtk.datamodel.interfaces.EntityDocument;
+import org.aksw.agdistis.util.*;
 
-import java.io.FileWriter;
 import java.io.InputStream;
 import java.util.*;
 
 public class TwitterToWiki_EL {
-
-    //private Logger log = LoggerFactory.getLogger(TwitterToWiki_EL.class);
-
-    private ArrayList<WikiEntity> entities;
 
     private ArrayList<String> twitterUserNames;
 
@@ -35,6 +25,8 @@ public class TwitterToWiki_EL {
 
     private String targetEntityId;
 
+    private JdbcCypherExecutor executor;
+
     public TwitterToWiki_EL() throws Exception {
         Properties prop = new Properties();
         InputStream input = NEDAlgo_HITS.class.getResourceAsStream("/config/agdistis.properties");
@@ -46,16 +38,19 @@ public class TwitterToWiki_EL {
         this.wikidataOpeator = new WikidataOpeator();
         this.wikidataOpeator.setResultsCountLimit(10);
         this.twitterUserNames = new ArrayList<>();
-        this.entities = new ArrayList<>();
+        //this.entities = new ArrayList<>();
 
         this.reb = new RelatedEntitiesBuffer(System.getProperty("user.dir") + "\\src\\main\\resources\\config\\relatedEntities.json");
+
+        this.executor = new JdbcCypherExecutor("neo4j", "123456");
 
     }
 
 
 
-    public void run(JSONObject twitterInfo) throws Exception {
+    public ArrayList<Node> run(JSONObject twitterInfo) throws Exception {
         //1. get context entities from given id
+        this.twitterUserNames = new ArrayList<>();
         this.targetUserName = twitterInfo.getString("userName");
         this.twitterUserNames.add(this.targetUserName);
         this.twitterUserNames.addAll(TwitterCandidate.getContextUserNames(twitterInfo));
@@ -70,32 +65,49 @@ public class TwitterToWiki_EL {
         //*************************************************************
 
 
-        //2. generate candidates for each context entities
+        //2. generate candidates for target user name
         WikidataSearch ws = new WikidataSearch();
+        ws.setSearchStrings(this.targetUserName);
+        ws.setMaxResultCount(10);
+        ws.setMaxThreadPoolSize(20);
+        ws.run();
+
+        if (ws.getResults().size() == 0)
+            return null;
+
+        if (ws.getResults().get(this.targetUserName).size() == 1) {
+            this.targetEntityId = ws.getResults().get(this.targetUserName).get(0);
+            return null;
+        }
+
+        //3. generate candidates for each context entities
+        ws = new WikidataSearch();
         ws.setSearchStrings(this.twitterUserNames);
         ws.setMaxResultCount(10);
         ws.setMaxThreadPoolSize(20);
         ws.run();
 
         HashMap<String, ArrayList<String>> results = ws.getResults();
-        int groupId = 0;
-        for (String str:  this.twitterUserNames) {
-            this.entities.addAll(this.getCandidates(results.get(str), groupId));
-            groupId += 1;
-        }
-        System.out.println("total candidates: " + this.entities.size());
+        System.out.println("get total candidates: " + results.size());
 
         //3. insert into graph
-        HashMap<String, Node> nodes = new HashMap<String, Node>();
         DirectedSparseGraph<Node, String> graph = new DirectedSparseGraph<Node, String>();
 
-        for (WikiEntity entity: this.entities) {
-            this.addNodeToGraph(graph, nodes, entity);
+        int groupId = 0;
+        for (String userName: this.twitterUserNames) {
+            if (!results.containsKey(userName))
+                continue;
+
+            this.addNodesToGraph(graph, results.get(userName), groupId);
+
+            groupId += 1;
         }
+
         System.out.println("insert entities into graph complete");
 
         //4. breadth first search
-        this.breadthFirstSearch(graph);
+        //this.breadthFirstSearch(graph);
+        this.breadthFirstSearchByNeo4j(graph);
         System.out.println("breadth first search complete");
 
         //5. HITS
@@ -116,15 +128,17 @@ public class TwitterToWiki_EL {
                 continue;
 
             if (node.containsId(0)) {
-                this.targetEntityId = node.getCandidateURI();
                 candidates.add(node);
             }
         }
 
+        this.targetEntityId = candidates.get(0).getCandidateURI();
+
         for (int i = 0; i < candidates.size(); i++) {
-            System.out.println("target id is: " + candidates.get(i).toString());
+            System.out.println("candidate id is: " + candidates.get(i).toString());
         }
 
+        return candidates;
     }
 
     private void breadthFirstSearch(DirectedSparseGraph<Node, String> graph) throws Exception {
@@ -172,76 +186,75 @@ public class TwitterToWiki_EL {
 
 
 
-    private ArrayList<WikiEntity> getCandidates(ArrayList<String> ids, int groupId) throws Exception {
-        ArrayList<WikiEntity> ret = new ArrayList<>();
-        Iterator iterator = ids.iterator();
-        while (iterator.hasNext()) {
-            String id = (String)iterator.next();
+    private void breadthFirstSearchByNeo4j(DirectedSparseGraph<Node, String> graph) throws Exception {
 
-            WikiEntity we = new WikiEntity();
-            we.setEntityId(id);
-            we.setGroupId(groupId);
 
-            ret.add(we);
+        NodeQueue q = new NodeQueue();
+        for (Node node : graph.getVertices()) {
+            q.add(node);
         }
 
-        return ret;
+        int count = 1;
+
+        while (!q.isEmpty()) {
+            Node currentNode = q.poll();
+            StringBuilder sqlString = new StringBuilder();
+
+            sqlString.append("MATCH ");
+            for (int i = 0; i < this.maxDepth + 1; i++) {
+                sqlString.append(String.format("(n%d:Item)", i));
+                if (i != this.maxDepth)
+                    sqlString.append(String.format("-[r%d:Related]->", i));
+            }
+            sqlString.append(String.format(" WHERE n0.name=\"%s\" RETURN ", currentNode.getCandidateURI()));
+
+            for (int i = 0; i < this.maxDepth; i++) sqlString.append(String.format("n%d,", i));
+
+            sqlString.append(String.format("n%d", this.maxDepth));
+
+            HashMap edges = (HashMap) Neo4jQueryResultParser.getEdges(executor.query(sqlString.toString(), null));
+
+            Iterator it = edges.values().iterator();
+
+            while (it.hasNext()) {
+                HashMap edgeMap = (HashMap) it.next();
+                Iterator itEdge = edgeMap.keySet().iterator();
+                String startId = (String) itEdge.next();
+                String endId = (String) edgeMap.get(startId);
+
+                Node startNode = new Node(startId, 0, 1, this.algorithm);
+                Node endNode = new Node(endId, 0, 1, this.algorithm);
+                graph.addEdge(String.valueOf(graph.getEdgeCount()), startNode, endNode);
+            }
+
+            //System.out.println(String.format("%d %s: %d", q.size(), currentNode.getCandidateURI(), edges.size()));
+        }
     }
 
-    private void addNodeToGraph(
+    private void addNodesToGraph(
             DirectedSparseGraph<Node, String> graph,
-            HashMap<String, Node> nodes,
-            WikiEntity entity
+            ArrayList<String> entitiesId,
+            int groupId
     ) throws Exception {
-        Node currentNode = new Node(entity.entityId, 0, 0, algorithm);
-        currentNode.addId(entity.groupId);
-        graph.addVertex(currentNode);
-        nodes.put(entity.entityId, currentNode);
+        for(String entityId: entitiesId) {
+            Node currentNode = new Node(entityId, 0, 0, algorithm);
+            currentNode.addId(groupId);
+            graph.addVertex(currentNode);
+        }
     }
 
-    private class WikiEntity {
-        private String entityId; //wiki id
-        private int groupId; //candidate entity number
-        private EntityDocument entityDocument;
-        private ArrayList<WikiEntity> relatedEntities;
+    public String getTargetEntityId() {
+        return targetEntityId;
+    }
 
-        public String getEntityId() {
-            return entityId;
-        }
-
-        public void setEntityId(String entityId) {
-            this.entityId = entityId;
-        }
-
-        public int getGroupId() {
-            return groupId;
-        }
-
-        public void setGroupId(int groupId) {
-            this.groupId = groupId;
-        }
-
-        public ArrayList<WikiEntity> getRelatedEntities() {
-            return relatedEntities;
-        }
-
-        public void setRelatedEntities(ArrayList<WikiEntity> relatedEntities) {
-            this.relatedEntities = relatedEntities;
-        }
-
-        public EntityDocument getEntityDocument() {
-            return entityDocument;
-        }
-
-        public void setEntityDocument(EntityDocument entityDocument) {
-            this.entityDocument = entityDocument;
-        }
+    public void close() throws Exception {
+        this.executor.close();
     }
 
     public static void main(String[] args) throws Exception {
 
         TwitterCandidate tc = new TwitterCandidate();
-        JSONObject jb = tc.getJsonInfoByScreenName("JBPritzker");
+        JSONObject jb = tc.getJsonInfoByScreenName("VoteBarbara");
 
         if (jb == null){
             System.out.println("get info json failed");
