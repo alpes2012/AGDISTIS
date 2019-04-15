@@ -102,6 +102,10 @@ public class WikiSearchSingalThread implements Runnable {
 
     private String preProcessSearchString (String searchStr) {
         String ret;
+
+        //SearchStringFilter ssf = new SearchStringFilter();
+        //searchStr = ssf.filter(searchStr);
+
         //替换空格
         ret = searchStr.replace(" ", "%20");
 

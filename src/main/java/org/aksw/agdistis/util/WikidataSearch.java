@@ -15,6 +15,10 @@ public class WikidataSearch {
 
     private int maxResultCount = 20;
 
+    private int completeCount = 0;
+
+    private int timeoutCount = 0;
+
     public WikidataSearch() {}
 
     public void run() throws Exception {
@@ -31,7 +35,7 @@ public class WikidataSearch {
 
         while (true) {
             System.out.println("search progress：" + executor.getCompletedTaskCount() + "/" + wstArray.size());
-            if (executor.getCompletedTaskCount() == wstArray.size()) {
+            if (executor.getCompletedTaskCount() == wstArray.size() || timeOut((int)executor.getCompletedTaskCount())) {
                 executor.shutdownNow();
                 break;
             }
@@ -44,6 +48,22 @@ public class WikidataSearch {
                 continue;
             this.results.put(searchStrings.get(i), wstArray.get(i).getResults());
         }
+    }
+
+    private boolean timeOut(int completeCount) {
+
+        if (this.completeCount == completeCount)
+            this.timeoutCount += 1;
+        else {
+            this.completeCount = completeCount;
+            this.timeoutCount = 0;
+        }
+
+        if (this.timeoutCount > 10)
+            return true;
+        else
+            return false;
+
     }
 
     public HashMap<String, ArrayList<String>> getResults() {

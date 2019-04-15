@@ -48,6 +48,7 @@ public class TTW_test {
 
         //2 linking
         Iterator it = twData.entrySet().iterator();
+        long totalStartTime=System.currentTimeMillis();
         while (it.hasNext()) {
             System.out.println("###################################################################");
 
@@ -88,5 +89,7 @@ public class TTW_test {
         //4 calculate ratio
         float accuracy = (float)correctCount / (float)totalCount;
         System.out.println(String.format("accuracy: %d / %d = %f", correctCount, totalCount, accuracy));
+        float totalCostTime = (float)(System.currentTimeMillis() - totalStartTime) / (float)1000;
+        System.out.println(String.format("total cost time: %fs", totalCostTime));
     }
 }

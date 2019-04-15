@@ -69,7 +69,7 @@ public class TwitterToWiki_EL {
         WikidataSearch ws = new WikidataSearch();
         ws.setSearchStrings(this.targetUserName);
         ws.setMaxResultCount(10);
-        ws.setMaxThreadPoolSize(20);
+        ws.setMaxThreadPoolSize(10);
         ws.run();
 
         if (ws.getResults().size() == 0)
@@ -84,11 +84,11 @@ public class TwitterToWiki_EL {
         ws = new WikidataSearch();
         ws.setSearchStrings(this.twitterUserNames);
         ws.setMaxResultCount(10);
-        ws.setMaxThreadPoolSize(20);
+        ws.setMaxThreadPoolSize(10);
         ws.run();
 
         HashMap<String, ArrayList<String>> results = ws.getResults();
-        System.out.println("get total candidates: " + results.size());
+        System.out.println("get total candidates sets: " + results.size());
 
         //3. insert into graph
         DirectedSparseGraph<Node, String> graph = new DirectedSparseGraph<Node, String>();
@@ -254,7 +254,7 @@ public class TwitterToWiki_EL {
     public static void main(String[] args) throws Exception {
 
         TwitterCandidate tc = new TwitterCandidate();
-        JSONObject jb = tc.getJsonInfoByScreenName("VoteBarbara");
+        JSONObject jb = tc.getJsonInfoByScreenName("RepChrisGibson");
 
         if (jb == null){
             System.out.println("get info json failed");
