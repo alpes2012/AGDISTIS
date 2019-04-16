@@ -11,8 +11,8 @@ public class Node implements Comparable<Node> {
 	private String candidateURI;
 	private String algo;
 	private int level;
-	private double hubWeightForCalculation = 1;
-	private double authorityWeightForCalculation = 1;
+	private double hubWeightForCalculation = 100;
+	private double authorityWeightForCalculation = 100;
 	private double unnormalizedHubWeight;
 	private double unnormalizedAuthorityWeight;
 	private double hubWeight;
@@ -27,8 +27,8 @@ public class Node implements Comparable<Node> {
 		this.candidateURI = uri;
 		this.activation = activation;
 		this.level = level;
-		this.hubWeight = 1;
-		this.authorityWeight = 1;
+		this.hubWeight = 100;
+		this.authorityWeight = 100;
 		ids = new HashSet<Integer>();
 		this.successors = new HashSet<Node>();
 		this.predecessors = new HashSet<Node>();

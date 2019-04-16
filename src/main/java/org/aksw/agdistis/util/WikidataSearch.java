@@ -59,7 +59,7 @@ public class WikidataSearch {
             this.timeoutCount = 0;
         }
 
-        if (this.timeoutCount > 10)
+        if (this.timeoutCount > 5)
             return true;
         else
             return false;

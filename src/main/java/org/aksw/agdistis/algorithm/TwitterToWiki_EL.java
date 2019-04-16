@@ -2,9 +2,11 @@ package org.aksw.agdistis.algorithm;
 
 import com.alibaba.fastjson.JSONObject;
 import edu.uci.ics.jung.graph.DirectedSparseGraph;
+import org.aksw.agdistis.experiments.TTW_test;
 import org.aksw.agdistis.graph.HITS;
 import org.aksw.agdistis.graph.Node;
 import org.aksw.agdistis.util.*;
+import org.apache.log4j.Logger;
 
 import java.io.InputStream;
 import java.util.*;
@@ -27,6 +29,10 @@ public class TwitterToWiki_EL {
 
     private JdbcCypherExecutor executor;
 
+    long startTime, endTime;
+
+    private static Logger logger = Logger.getLogger(TwitterToWiki_EL.class);
+
     public TwitterToWiki_EL() throws Exception {
         Properties prop = new Properties();
         InputStream input = NEDAlgo_HITS.class.getResourceAsStream("/config/agdistis.properties");
@@ -38,7 +44,6 @@ public class TwitterToWiki_EL {
         this.wikidataOpeator = new WikidataOpeator();
         this.wikidataOpeator.setResultsCountLimit(10);
         this.twitterUserNames = new ArrayList<>();
-        //this.entities = new ArrayList<>();
 
         this.reb = new RelatedEntitiesBuffer(System.getProperty("user.dir") + "\\src\\main\\resources\\config\\relatedEntities.json");
 
@@ -46,16 +51,16 @@ public class TwitterToWiki_EL {
 
     }
 
-
-
     public ArrayList<Node> run(JSONObject twitterInfo) throws Exception {
+        this.targetEntityId = null;
+
         //1. get context entities from given id
         this.twitterUserNames = new ArrayList<>();
         this.targetUserName = twitterInfo.getString("userName");
         this.twitterUserNames.add(this.targetUserName);
         this.twitterUserNames.addAll(TwitterCandidate.getContextUserNames(twitterInfo));
-        System.out.println("start linking target user: " + this.targetUserName);
-        System.out.println("get context user: " + this.twitterUserNames.size());
+        logger.info("r:userName:" + this.targetUserName);
+        logger.info("r:contextUserCount:" + this.twitterUserNames.size());
 
         //*************************************************************
 
@@ -72,13 +77,21 @@ public class TwitterToWiki_EL {
         ws.setMaxThreadPoolSize(10);
         ws.run();
 
-        if (ws.getResults().size() == 0)
+        if (ws.getResults().size() == 0) {
+            logger.info("r:getTargetCandidates:failed");
             return null;
+        }
 
+        logger.info("r:getTargetCandidates:success");
+        logger.info("r:targetCandidateCount:" + ws.getResults().get(this.targetUserName).size());
+
+        //只有一个，直接给结果
         if (ws.getResults().get(this.targetUserName).size() == 1) {
             this.targetEntityId = ws.getResults().get(this.targetUserName).get(0);
             return null;
         }
+
+        startTime = System.currentTimeMillis();
 
         //3. generate candidates for each context entities
         ws = new WikidataSearch();
@@ -88,7 +101,8 @@ public class TwitterToWiki_EL {
         ws.run();
 
         HashMap<String, ArrayList<String>> results = ws.getResults();
-        System.out.println("get total candidates sets: " + results.size());
+        logger.info("r:contextCandidateSetCount:" + results.size());
+        logger.info("r:searchCostTime:" + this.costTime(startTime));
 
         //3. insert into graph
         DirectedSparseGraph<Node, String> graph = new DirectedSparseGraph<Node, String>();
@@ -103,18 +117,19 @@ public class TwitterToWiki_EL {
             groupId += 1;
         }
 
-        System.out.println("insert entities into graph complete");
+        logger.info("r:bfsCandidateCount:" + graph.getVertices().size());
+
+        startTime = System.currentTimeMillis();
 
         //4. breadth first search
         //this.breadthFirstSearch(graph);
         this.breadthFirstSearchByNeo4j(graph);
-        System.out.println("breadth first search complete");
+        logger.info("r:bfsCostTime:" + this.costTime(startTime));
 
         //5. HITS
-        System.out.print("start to hits...");
+        logger.info("start to hits...");
         HITS h = new HITS();
         h.runHits(graph, 20);
-        System.out.println("done!");
 
         //6. select the one
         ArrayList<Node> orderedList = new ArrayList<Node>();
@@ -135,10 +150,14 @@ public class TwitterToWiki_EL {
         this.targetEntityId = candidates.get(0).getCandidateURI();
 
         for (int i = 0; i < candidates.size(); i++) {
-            System.out.println("candidate id is: " + candidates.get(i).toString());
+            logger.info(String.format("%s H: %f A: %f", candidates.get(i).getCandidateURI(), candidates.get(i).getHubWeight(), candidates.get(i).getAuthorityWeight()));
         }
 
         return candidates;
+    }
+
+    private float costTime(long startTime) {
+        return (float)(System.currentTimeMillis() - startTime) / (float)1000;
     }
 
     private void breadthFirstSearch(DirectedSparseGraph<Node, String> graph) throws Exception {
